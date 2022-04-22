@@ -1,8 +1,14 @@
-from flask import Flask, request, url_for, render_template
+from flask import Flask, request, url_for, render_template, redirect
 from random import randrange
+from data import db_session
+from data.users import User
+from forms.user import RegisterForm
+import os
 
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
+SECRET_KEY = os.urandom(32)
+app.config['SECRET_KEY'] = SECRET_KEY
 
 
 @app.route('/', methods=['POST', 'GET'])
@@ -25,9 +31,10 @@ def main():
                             <link rel="stylesheet"
                             href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
                         </head>
+                        
                         <body>
                             <center>
-                                <form class="login_form" method="post">
+                                <form class="form-group" method="post">
                                     <div class="alert alert-primary" role="alert"></div>
                                     <h1>{randrange(nums[0], nums[1])}</h1>
                     
@@ -45,7 +52,7 @@ def main():
                                            name="before"
                                            value="{nums[1]}">
                     
-                                    <button type="submit" class="btn btn-primary">Write</button>
+                                    <button type="submit" class="btn btn-primary">Generate</button>
                                 </form>
                             </center>
                         </body>
@@ -130,5 +137,31 @@ def image():
     return f'''<img src="{url_for('static', filename='map.png')}">'''
 
 
+@app.route('/register', methods=['GET', 'POST'])
+def reqister():
+    form = RegisterForm()
+    if form.validate_on_submit():
+        if form.password.data != form.password_again.data:
+            return render_template('register.html', title='Регистрация',
+                                   form=form,
+                                   message="Пароли не совпадают")
+        db_sess = db_session.create_session()
+        if db_sess.query(User).filter(User.email == form.email.data).first():
+            return render_template('register.html', title='Регистрация',
+                                   form=form,
+                                   message="Такой пользователь уже есть")
+        user = User(
+            name=form.name.data,
+            email=form.email.data,
+            about=form.about.data
+        )
+        user.set_password(form.password.data)
+        db_sess.add(user)
+        db_sess.commit()
+        return redirect('/login')
+    return render_template('register.html', title='Регистрация', form=form)
+
+
 if __name__ == '__main__':
+    db_session.global_init("db/blogs.db")
     app.run(port=8080, host='127.0.0.1')
