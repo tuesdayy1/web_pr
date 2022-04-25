@@ -1,14 +1,25 @@
-from flask import Flask, request, url_for, render_template, redirect
+from flask import Flask, request, url_for, render_template, \
+    redirect
 from random import randrange
 from data import db_session
 from data.users import User
-from forms.user import RegisterForm
+from forms.user import RegisterForm, LoginForm
 import os
+from flask_login import LoginManager, login_user, login_required, logout_user
+import flask_login
 
 
 app = Flask(__name__, template_folder='templates')
 SECRET_KEY = os.urandom(32)
 app.config['SECRET_KEY'] = SECRET_KEY
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    db_sess = db_session.create_session()
+    return db_sess.query(User).get(user_id)
 
 
 @app.route('/', methods=['POST', 'GET'])
@@ -17,119 +28,149 @@ def main():
     if request.method == 'GET':
         from_ = 1
         before = 100
-        return render_template('index.html', params={'result': randrange(from_, before), })
-    elif request.method == 'POST':
-        from_ = 1 if not request.form['from'] else int(request.form['from'])
-        before = 100 if not request.form['before'] else int(request.form['before'])
-        nums.append(from_)
-        nums.append(before)
-        # return render_template('index.html', params={'result': randrange(from_, before)})
-        return f'''<!DOCTYPE html>
+        if 'flask_login.mixins.AnonymousUserMixin' in str(flask_login.current_user):
+            return f'''<!DOCTYPE html>
                     <html lang="en">
                         <head>
                             <meta charset="utf-8">
                             <link rel="stylesheet"
                             href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
                         </head>
-                        
                         <body>
-                            <center>
-                                <form class="form-group" method="post">
-                                    <div class="alert alert-primary" role="alert"></div>
-                                    <h1>{randrange(nums[0], nums[1])}</h1>
-                    
+                            <form class="form-group" method="post">
+                                <div class="alert alert-primary" role="alert">
+                                    <a href="http://127.0.0.1:8080/login">Войти</a>
+                                </div>
+                                <center>
+                                    <h1>{randrange(from_, before)}</h1>
                                     <input type="text"
-                                           class="form-control"
-                                           autocomplete="off"
-                                           placeholder="first number"
-                                           name="from"
-                                           value="{nums[0]}">
-                    
+                                        class="form-control"
+                                        autocomplete="off"
+                                        placeholder="first number"
+                                        name="from"
+                                        value="{from_}">
                                     <input type="text"
-                                           class="form-control"
-                                           autocomplete="off"
-                                           placeholder="second number"
-                                           name="before"
-                                           value="{nums[1]}">
-                    
+                                        class="form-control"
+                                        autocomplete="off"
+                                        placeholder="second number"
+                                        name="before"
+                                        value="{before}">
                                     <button type="submit" class="btn btn-primary">Generate</button>
-                                </form>
-                            </center>
+                                </center>
+                            </form>
                         </body>
                     </html>'''
-
-
-@app.route('/a', methods=['POST', 'GET'])
-def form_sample():
-    if request.method == 'GET':
-        return f'''
-                        <html lang="en">
-                          <head>
-                            <meta charset="utf-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-                            <link rel="stylesheet"
-                            href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
-                            <link rel="stylesheet" type="text/css" href="{url_for('static', filename='css/style.css')}"/>
-                            <title>Покупка</title>
-                          </head>
-                          
-                          <body>
-                            <h1>Форма для регистрации в суперсекретной системе</h1>
-                            <div>
-                                <form class="login_form" method="post">
-                                    <input type="email" class="form-control" id="email" aria-describedby="emailHelp" placeholder="Введите адрес почты" name="email">
-                                    <input type="password" class="form-control" id="password" placeholder="Введите пароль" name="password">
-                                    <div class="form-group">
-                                        <label for="classSelect">В каком вы классе</label>
-                                        <select class="form-control" id="classSelect" name="class">
-                                          <option>7</option>
-                                          <option>8</option>
-                                          <option>9</option>
-                                          <option>10</option>
-                                          <option>11</option>
-                                        </select>
-                                     </div>
-                                    <div class="form-group">
-                                        <label for="about">Немного о себе</label>
-                                        <textarea class="form-control" id="about" rows="3" name="about"></textarea>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="photo">Приложите фотографию</label>
-                                        <input type="file" class="form-control-file" id="photo" name="file">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="form-check">Укажите пол</label>
-                                        <div class="form-check">
-                                          <input class="form-check-input" type="radio" name="sex" id="male" value="male" checked>
-                                          <label class="form-check-label" for="male">
-                                            Мужской
-                                          </label>
-                                        </div>
-                                        <div class="form-check">
-                                          <input class="form-check-input" type="radio" name="sex" id="female" value="female">
-                                          <label class="form-check-label" for="female">
-                                            Женский
-                                          </label>
-                                        </div>
-                                    </div>
-                                    <div class="form-group form-check">
-                                        <input type="checkbox" class="form-check-input" id="acceptRules" name="accept">
-                                        <label class="form-check-label" for="acceptRules">Готов быть добровольцем</label>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Записаться</button>
-                                </form>
-                            </div>
-                          </body>
-                        </html>'''
+        else:
+            return f'''<!DOCTYPE html>
+                                <html lang="en">
+                                    <head>
+                                        <meta charset="utf-8">
+                                        <link rel="stylesheet"
+                                        href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
+                                    </head>
+                                    <body>
+                                        <form class="form-group" method="post">
+                                            <div class="alert alert-primary" role="alert">
+                                                <h4>{flask_login.current_user.name}</h4>
+                                                <a href="http://127.0.0.1:8080/logout">Выйти</a>
+                                            </div>
+                                            <center>
+                                                <h1>{randrange(from_, before)}</h1>
+                                                <input type="text"
+                                                    class="form-control"
+                                                    autocomplete="off"
+                                                    placeholder="first number"
+                                                    name="from"
+                                                    value="{from_}">
+                                                <input type="text"
+                                                    class="form-control"
+                                                    autocomplete="off"
+                                                    placeholder="second number"
+                                                    name="before"
+                                                    value="{before}">
+                                                <button type="submit" class="btn btn-primary">Generate</button>
+                                            </center>
+                                        </form>
+                                    </body>
+                                </html>'''
     elif request.method == 'POST':
-        print(request.form['email'])
-        print(request.form['password'])
-        print(request.form['class'])
-        print(request.form['file'])
-        print(request.form['about'])
-        print(request.form['accept'])
-        print(request.form['sex'])
-        return "Форма отправлена"
+        from_ = 1 if not request.form['from'] else int(request.form['from'])
+        before = 100 if not request.form['before'] else int(request.form['before'])
+        nums.append(from_)
+        nums.append(before)
+        if 'flask_login.mixins.AnonymousUserMixin' in str(flask_login.current_user):
+            return f'''<!DOCTYPE html>
+                        <html lang="en">
+                            <head>
+                                <meta charset="utf-8">
+                                <link rel="stylesheet"
+                                href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
+                            </head>
+                            
+                            <body>
+                                <form class="form-group" method="post">
+                                    <div class="alert alert-primary" role="alert">
+                                        <a href="http://127.0.0.1:8080/login">Войти</a>
+                                    </div>
+                                    <center>
+                                        <h1>{randrange(nums[0], nums[1] + 1)}</h1>
+                        
+                                        <input type="text"
+                                               class="form-control"
+                                               autocomplete="off"
+                                               placeholder="first number"
+                                               name="from"
+                                               value="{nums[0]}">
+                        
+                                        <input type="text"
+                                               class="form-control"
+                                               autocomplete="off"
+                                               placeholder="second number"
+                                               name="before"
+                                               value="{nums[1]}">
+                        
+                                        <button type="submit" class="btn btn-primary">Generate</button>
+                                    </center>
+                                </form>
+                            </body>
+                        </html>'''
+        else:
+            return f'''<!DOCTYPE html>
+                                    <html lang="en">
+                                        <head>
+                                            <meta charset="utf-8">
+                                            <link rel="stylesheet"
+                                            href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
+                                        </head>
+
+                                        <body>
+                                            <form class="form-group" method="post">
+                                                <div class="alert alert-primary" role="alert">
+                                                    <h4>{flask_login.current_user.name}</h4>
+                                                    <a href="http://127.0.0.1:8080/logout">Выйти</a>
+                                                </div>
+                                                <center>
+                                                    <h1>{randrange(nums[0], nums[1] + 1)}</h1>
+
+                                                    <input type="text"
+                                                           class="form-control"
+                                                           autocomplete="off"
+                                                           placeholder="first number"
+                                                           name="from"
+                                                           value="{nums[0]}">
+
+                                                    <input type="text"
+                                                           class="form-control"
+                                                           autocomplete="off"
+                                                           placeholder="second number"
+                                                           name="before"
+                                                           value="{nums[1]}">
+
+                                                    <button type="submit" class="btn btn-primary">Generate</button>
+                                                </center>
+                                            </form>
+                                        </body>
+                                    </html>'''
 
 
 @app.route('/image')
@@ -160,6 +201,28 @@ def reqister():
         db_sess.commit()
         return redirect('/login')
     return render_template('register.html', title='Регистрация', form=form)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        user = db_sess.query(User).filter(User.email == form.email.data).first()
+        if user and user.check_password(form.password.data):
+            login_user(user, remember=form.remember_me.data)
+            return redirect("/")
+        return render_template('login.html',
+                               message="Неправильный логин или пароль",
+                               form=form)
+    return render_template('login.html', title='Авторизация', form=form)
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect("/")
 
 
 if __name__ == '__main__':

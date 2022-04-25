@@ -13,9 +13,12 @@
         }
     </style>
     <body>
-        <center>
-            <form class="login_form" method="post">
-                <div class="alert alert-primary" role="alert"></div>
+        <form class="login_form" method="post">
+            <div class="alert alert-primary" role="alert">
+                <h4>{flask_login.current_user.name}</h4>
+                <a href="http://127.0.0.1:8080/logout">Выйти</a>
+            </div>
+            <center>
                 <h1>{{ result }}</h1>
 
                 <input type="text"
@@ -33,7 +36,7 @@
                        value="100">
 
                 <button type="submit" class="btn btn-primary">Generate</button>
-            </form>
-        </center>
+            </center>
+        </form>
     </body>
 </html>
