@@ -1,3 +1,4 @@
 pip==21.3.1
 flask==2.0.3
 flask_login==0.6.0
+flask_wtf==2.1.1
